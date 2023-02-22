@@ -1,21 +1,18 @@
 // Reference Implementation Link:-
 // https://github.com/iden3/circomlib/blob/master/circuits/poseidon.circom
 
-global nOuts: Field = 1;
 global nInputs: Field = 1;
+global nOuts: Field = 1;
+// global N_ROUNDS_P: [Field; 16] = [56, 57, 56, 60, 60, 63, 64, 63, 60, 66, 60, 65, 70, 60, 64, 68];
+
 // Declaring several global constants due to following error
 // Array-length expressions can only have simple integer operations and any variables used must be global constant
-global t: Field = 2;
+global t: comptime Field = 2; // nInputs + 1
 global nRoundsF: Field = 8;
-global nRoundsP: Field = 56;
+global nRoundsP: Field = 56; // N_ROUNDS_P[t-2]
 
 fn main(inputs : [Field], output : Field) {
-    // let N_ROUNDS_P: [u8; 16] = [56, 57, 56, 60, 60, 63, 64, 63, 60, 66, 60, 65, 70, 60, 64, 68];
-    // let t: u8 = nInputs + 1;
-    // let nRoundsF: u8 = 8;
-    // let nRoundsP: u8 = N_ROUNDS_P[t-2];
     let C = POSEIDON_C();
-    // let Ssize: u8 = N_ROUNDS_P[t-2] * (t*2-1); 
     let S = POSEIDON_S();
     let M = POSEIDON_M();
     let P = POSEIDON_P();
@@ -141,7 +138,7 @@ fn main(inputs : [Field], output : Field) {
     constrain output == outp;
 }
 
-fn Ark(inp: [Field], C: [Field], r: Field) -> [Field; t] {
+fn Ark(inp: [Field], C: [Field], r: comptime Field) -> [Field; t] {
     let mut out: [Field; t] = [0; t];
     for i in 0..t {
         out[i] = inp[i] + C[i + r];
@@ -168,7 +165,7 @@ fn Mix(inp: [Field], M: [[Field]]) -> [Field; t] {
     out
 }
 
-fn MixS(inp: [Field], S: [Field], r: Field) -> [Field;t] {
+fn MixS(inp: [Field], S: [Field], r: comptime Field) -> [Field;t] {
     let mut out: [Field; t] = [0; t];
     let mut lc: Field = 0;
 
@@ -182,7 +179,7 @@ fn MixS(inp: [Field], S: [Field], r: Field) -> [Field;t] {
     out
 }
 
-fn MixLast(inp: [Field], M: [[Field]], s: Field) -> Field {
+fn MixLast(inp: [Field], M: [[Field]], s: comptime Field) -> Field {
     let mut lc: Field = 0;
     for j in 0..t {
         lc += M[j][s]*inp[j];
