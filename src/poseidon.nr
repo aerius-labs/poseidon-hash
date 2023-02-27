@@ -125,10 +125,10 @@ fn digest<N>(inputs : [Field; N]) -> Field {
     }
 
     for j in 0..t {
-        mixLastInp[i][j] = sigmaFOut[nRoundsF-1][j];
+        mixLastInp[0][j] = sigmaFOut[nRoundsF-1][j];
     }
-    mixLastOut = MixLast(mixLastInp[i], M, i);
-    
+    mixLastOut = MixLast(mixLastInp[0], M, i);
+
     mixLastOut
 }
 
