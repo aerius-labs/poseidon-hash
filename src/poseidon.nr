@@ -12,31 +12,31 @@ global nRoundsF: Field = 8;
 global nRoundsP: Field = 56; // N_ROUNDS_P[t-2]
 
 
-fn digest(inputs : [Field]) -> Field {
+fn digest<N>(inputs : [Field; N]) -> Field {
     let C = POSEIDON_C();
     let S = POSEIDON_S();
     let M = POSEIDON_M();
     let P = POSEIDON_P();
     let initialState = 0;
 
-    let mut arkInp: [[Field; t]; nRoundsF] = [[0; t]; nRoundsF];
-    let mut arkOut: [[Field; t]; nRoundsF] = [[0; t]; nRoundsF];
-    let mut sigmaFInp: [[Field; t]; nRoundsF] = [[0; t]; nRoundsF];
-    let mut sigmaFOut: [[Field; t]; nRoundsF] = [[0; t]; nRoundsF];
+    let mut arkInp: [Field; t*nRoundsF] = [0; t*nRoundsF];
+    let mut arkOut: [Field; t*nRoundsF] = [0; t*nRoundsF];
+    let mut sigmaFInp: [Field; t*nRoundsF] = [0; t*nRoundsF];
+    let mut sigmaFOut: [Field; t*nRoundsF] = [0; t*nRoundsF];
     let mut sigmaPInp: [Field; nRoundsP] = [0; nRoundsP];
     let mut sigmaPOut: [Field; nRoundsP] = [0; nRoundsP];
-    let mut mixInp: [[Field; t]; nRoundsF-1] = [[0; t]; nRoundsF-1];
-    let mut mixOut: [[Field; t]; nRoundsF-1] = [[0; t]; nRoundsF-1];
-    let mut mixSInp: [[Field; t]; nRoundsP] = [[0; t]; nRoundsP];
-    let mut mixSOut: [[Field; t]; nRoundsP] = [[0; t]; nRoundsP];
-    let mut mixLastInp: [[Field; t]; nOuts] = [[0; t]; nOuts];
+    let mut mixInp: [Field; t*(nRoundsF-1)] = [0; t*(nRoundsF-1)];
+    let mut mixOut: [Field; t*(nRoundsF-1)] = [0; t*(nRoundsF-1)];
+    let mut mixSInp: [Field; t*nRoundsP] = [0; t*nRoundsP];
+    let mut mixSOut: [Field; t*nRoundsP] = [0; t*nRoundsP];
+    let mut mixLastInp: [Field; t*nOuts] = [0; t*nOuts];
     let mut mixLastOut: [Field; nOuts] = [0; nOuts];
 
     for j in 0..t {
         if j>0 {
-            arkInp[0][j] = inputs[j-1];
+            arkInp[0*t+j] = inputs[j-1];
         } else {
-            arkInp[0][j] = initialState;
+            arkInp[0*t+j] = initialState;
         }
     }
     arkOut[0] = Ark(arkInp[0], C, 0);
@@ -44,55 +44,55 @@ fn digest(inputs : [Field]) -> Field {
     for r in 0..nRoundsF/2-1 {
         for j in 0..t {
             if r==0 {
-                sigmaFInp[r][j] = arkOut[0][j];
+                sigmaFInp[r*t+j] = arkOut[0*t+j];
             } else {
-                sigmaFInp[r][j] = mixOut[r-1][j];
+                sigmaFInp[r*t+j] = mixOut[(r-1)*t+j];
             }
-            sigmaFOut[r][j] = Sigma(sigmaFInp[r][j]);
+            sigmaFOut[r*t+j] = Sigma(sigmaFInp[r*t+j]);
         }
 
         for j in 0..t {
-            arkInp[r+1][j] = sigmaFOut[r][j];
+            arkInp[(r+1)*t+j] = sigmaFOut[r*t+j];
         }
         arkOut[r+1] = Ark(arkInp[r+1], C, (r+1)*t);
 
         for j in 0..t {
-            mixInp[r][j] = arkOut[r+1][j];
+            mixInp[r*t+j] = arkOut[(r+1)*t+j];
         }
         mixOut[r] = Mix(mixInp[r], M);
     }
 
     for j in 0..t {
-        sigmaFInp[nRoundsF/2-1][j] = mixOut[nRoundsF/2-2][j];
-        sigmaFOut[nRoundsF/2-1][j] = Sigma(sigmaFInp[nRoundsF/2-1][j]);
+        sigmaFInp[(nRoundsF/2-1)*t+j] = mixOut[(nRoundsF/2-2)*t+j];
+        sigmaFOut[(nRoundsF/2-1)*t+j] = Sigma(sigmaFInp[(nRoundsF/2-1)*t+j]);
     }
 
     for j in 0..t {
-        arkInp[nRoundsF/2][j] = sigmaFOut[nRoundsF/2-1][j];
+        arkInp[(nRoundsF/2)*t+j] = sigmaFOut[(nRoundsF/2-1)*t+j];
     }
     arkOut[nRoundsF/2] = Ark(arkOut[nRoundsF/2], C, (nRoundsF/2)*t);
 
     for j in 0..t {
-        mixInp[nRoundsF/2-1][j] = arkOut[nRoundsF/2][j];
+        mixInp[(nRoundsF/2-1)*t+j] = arkOut[(nRoundsF/2)*t+j];
     }
     mixOut[nRoundsF/2-1] = Mix(mixInp[nRoundsF/2-1], P);
 
     for r in 0..nRoundsP {
         if r==0 {
-            sigmaPInp[r] = mixOut[nRoundsF/2-1][0];
+            sigmaPInp[r] = mixOut[(nRoundsF/2-1)*t+0];
         } else {
-            sigmaPInp[r] = mixSOut[r-1][0];
+            sigmaPInp[r] = mixSOut[(r-1)*t+0];
         }
         sigmaPOut[r] = Sigma(sigmaPInp[r]);
 
         for j in 0..t {
             if j==0 {
-                mixSInp[r][j] = sigmaPOut[r] + C[(nRoundsF/2+1)*t + r];
+                mixSInp[r*t+j] = sigmaPOut[r] + C[(nRoundsF/2+1)*t + r];
             } else {
                 if r==0 {
-                    mixSInp[r][j] = mixOut[nRoundsF/2-1][j];
+                    mixSInp[r*t+j] = mixOut[(nRoundsF/2-1)*t+j];
                 } else {
-                    mixSInp[r][j] = mixSOut[r-1][j];
+                    mixSInp[r*t+j] = mixSOut[(r-1)*t+j];
                 }
             }
         }
@@ -102,27 +102,27 @@ fn digest(inputs : [Field]) -> Field {
     for r in 0..nRoundsF/2-1 {
         for j in 0..t {
             if r==0 {
-                sigmaFInp[nRoundsF/2 + r][j] = mixSOut[nRoundsP-1][j];
+                sigmaFInp[(nRoundsF/2 + r)*t+j] = mixSOut[(nRoundsP-1)*t+j];
             } else {
-                sigmaFInp[nRoundsF/2 + r][j] = mixOut[nRoundsF/2+r-1][j];
+                sigmaFInp[(nRoundsF/2 + r)*t+j] = mixOut[(nRoundsF/2+r-1)*t+j];
             }
-            sigmaFOut[nRoundsF/2 + r][j] = Sigma(sigmaFInp[nRoundsF/2 + r][j]);
+            sigmaFOut[(nRoundsF/2 + r)*t+j] = Sigma(sigmaFInp[(nRoundsF/2 + r)*t+j]);
         }
 
         for j in 0..t {
-            arkInp[nRoundsF/2 + r + 1][j] = sigmaFOut[nRoundsF/2 + r][j];
+            arkInp[(nRoundsF/2 + r + 1)*t+j] = sigmaFOut[(nRoundsF/2 + r)*t+j];
         }
         arkOut[nRoundsF/2 + r + 1] = Ark(arkInp[nRoundsF/2 + r + 1], C, (nRoundsF/2+1)*t + nRoundsP + r*t);
 
         for j in 0..t {
-            mixInp[nRoundsF/2 + r][j] = arkOut[nRoundsF/2 + r + 1][j];
+            mixInp[(nRoundsF/2 + r)*t+j] = arkOut[(nRoundsF/2 + r + 1)*t+j];
         }
         mixOut[nRoundsF/2 + r] = Mix(mixInp[nRoundsF/2 + r], M);
     }
 
     for j in 0..t {
-        sigmaFInp[nRoundsF-1][j] = mixOut[nRoundsF-2][j];
-        sigmaFOut[nRoundsF-1][j] = Sigma(sigmaFInp[nRoundsF-1][j]);
+        sigmaFInp[(nRoundsF-1)*t+j] = mixOut[(nRoundsF-2)*t+j];
+        sigmaFOut[(nRoundsF-1)*t+j] = Sigma(sigmaFInp[(nRoundsF-1)*t+j]);
     }
 
     let mut out: [Field; nOuts] = [0; nOuts];
@@ -153,13 +153,13 @@ fn Sigma(inp: Field) -> Field {
     in4*inp
 }
 
-fn Mix(inp: [Field], M: [[Field]]) -> [Field; t] {
+fn Mix(inp: [Field], M: [Field]) -> [Field; t] {
     let mut lc: Field = 0;
     let mut out: [Field; t] = [0; t];
     for i in 0..t {
         lc = 0;
         for j in 0..t {
-            lc += M[j][i]*inp[j];
+            lc += M[j*t+i]*inp[j];
         }
         out[i] = lc;
     }
@@ -180,10 +180,10 @@ fn MixS(inp: [Field], S: [Field], r: comptime Field) -> [Field;t] {
     out
 }
 
-fn MixLast(inp: [Field], M: [[Field]], s: comptime Field) -> Field {
+fn MixLast(inp: [Field], M: [Field], s: comptime Field) -> Field {
     let mut lc: Field = 0;
     for j in 0..t {
-        lc += M[j][s]*inp[j];
+        lc += M[j*t+s]*inp[j];
     }
     lc
 }
@@ -438,28 +438,22 @@ fn POSEIDON_S() -> [Field; 168] {
     ]
 }
 
-fn POSEIDON_M() -> [[Field; 2]; 2] {
+fn POSEIDON_M() -> [Field; 4] {
     [
-        [
             2910766817845651019878574839501801340070030115151021261302834310722729507541,
-            5776684794125549462448597414050232243778680302179439492664047328281728356345
-        ],
-        [
+            5776684794125549462448597414050232243778680302179439492664047328281728356345,
+        
             19727366863391167538122140361473584127147630672623100827934084310230022599144,
             8348174920934122550483593999453880006756108121341067172388445916328941978568
-        ]
     ]
 }
 
-fn POSEIDON_P() -> [[Field; 2]; 2]{
+fn POSEIDON_P() -> [Field; 4]{
     [
-        [
             2910766817845651019878574839501801340070030115151021261302834310722729507541,
-            14876694094903316616163091687595355836267453073383265044550370713659048938454
-        ],
-        [
+            14876694094903316616163091687595355836267453073383265044550370713659048938454,
+
             19727366863391167538122140361473584127147630672623100827934084310230022599144,
             7527312705817953459920138003796377030820958175883853967715612380516078993222
-        ]
     ]
 }
