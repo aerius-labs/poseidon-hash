@@ -2,7 +2,6 @@
 // https://github.com/iden3/circomlib/blob/master/circuits/poseidon.circom
 
 global nInputs: Field = 1;
-global nOuts: Field = 1;
 // global N_ROUNDS_P: [Field; 16] = [56, 57, 56, 60, 60, 63, 64, 63, 60, 66, 60, 65, 70, 60, 64, 68];
 
 // Declaring several global constants due to following error
@@ -29,8 +28,8 @@ fn digest<N>(inputs : [Field; N]) -> Field {
     let mut mixOut: [Field; t*(nRoundsF-1)] = [0; t*(nRoundsF-1)];
     let mut mixSInp: [Field; t*nRoundsP] = [0; t*nRoundsP];
     let mut mixSOut: [Field; t*nRoundsP] = [0; t*nRoundsP];
-    let mut mixLastInp: [Field; t*nOuts] = [0; t*nOuts];
-    let mut mixLastOut: [Field; nOuts] = [0; nOuts];
+    let mut mixLastInp: [Field; t] = [0; t];
+    let mut mixLastOut: Field = 0;
 
     for j in 0..t {
         if j>0 {
@@ -125,18 +124,12 @@ fn digest<N>(inputs : [Field; N]) -> Field {
         sigmaFOut[(nRoundsF-1)*t+j] = Sigma(sigmaFInp[(nRoundsF-1)*t+j]);
     }
 
-    let mut out: [Field; nOuts] = [0; nOuts];
-    for i in 0..nOuts {
-        for j in 0..t {
-            mixLastInp[i][j] = sigmaFOut[nRoundsF-1][j];
-        }
-        mixLastOut[i] = MixLast(mixLastInp[i], M, i);
-        out[i] = mixLastOut[i];
+    for j in 0..t {
+        mixLastInp[i][j] = sigmaFOut[nRoundsF-1][j];
     }
-
-    // TODO: Change below code
-    let outp = 0;
-    outp
+    mixLastOut = MixLast(mixLastInp[i], M, i);
+    
+    mixLastOut
 }
 
 fn Ark(inp: [Field], C: [Field], r: comptime Field) -> [Field; t] {
