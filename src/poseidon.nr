@@ -19,27 +19,28 @@ fn digest<N>(inputs : [Field; N]) -> Field {
     let P = POSEIDON_P();
     let initialState = 0;
 
-    let mut arkInp: [Field; t*nRoundsF] = [0; t*nRoundsF];
     let mut arkOut: [Field; t*nRoundsF] = [0; t*nRoundsF];
     let mut sigmaFInp: [Field; t*nRoundsF] = [0; t*nRoundsF];
     let mut sigmaFOut: [Field; t*nRoundsF] = [0; t*nRoundsF];
     let mut sigmaPInp: [Field; nRoundsP] = [0; nRoundsP];
     let mut sigmaPOut: [Field; nRoundsP] = [0; nRoundsP];
-    let mut mixInp: [Field; t*(nRoundsF-1)] = [0; t*(nRoundsF-1)];
     let mut mixOut: [Field; t*(nRoundsF-1)] = [0; t*(nRoundsF-1)];
-    let mut mixSInp: [Field; t*nRoundsP] = [0; t*nRoundsP];
     let mut mixSOut: [Field; t*nRoundsP] = [0; t*nRoundsP];
-    let mut mixLastInp: [Field; t*nOuts] = [0; t*nOuts];
     let mut mixLastOut: [Field; nOuts] = [0; nOuts];
+    let mut inp: [Field; t] = [0; t];
+    let mut out: [Field; t] = [0; t];
 
     for j in 0..t {
         if j>0 {
-            arkInp[0*t+j] = inputs[j-1];
+            inp[j] = inputs[j-1];
         } else {
-            arkInp[0*t+j] = initialState;
+            inp[j] = initialState;
         }
     }
-    arkOut[0] = Ark(arkInp[0], C, 0);
+    out = Ark(inp, C, 0);
+    for i in 0..t {
+        arkOut[0*t+i] = out[i];
+    }
 
     for r in 0..nRoundsF/2-1 {
         for j in 0..t {
@@ -52,14 +53,20 @@ fn digest<N>(inputs : [Field; N]) -> Field {
         }
 
         for j in 0..t {
-            arkInp[(r+1)*t+j] = sigmaFOut[r*t+j];
+            inp[j] = sigmaFOut[r*t+j];
         }
-        arkOut[r+1] = Ark(arkInp[r+1], C, (r+1)*t);
+        out = Ark(inp, C, (r+1)*t);
+        for i in 0..t {
+            arkOut[(r+1)*t+i] = out[i];
+        }
 
-        for j in 0..t {
-            mixInp[r*t+j] = arkOut[(r+1)*t+j];
+        for i in 0..t {
+            inp[i] = arkOut[(r+1)*t+i];
         }
-        mixOut[r] = Mix(mixInp[r], M);
+        out = Mix(inp, M);
+        for i in 0..t {
+            mixOut[r*t+i] = out[i];
+        }
     }
 
     for j in 0..t {
@@ -68,14 +75,20 @@ fn digest<N>(inputs : [Field; N]) -> Field {
     }
 
     for j in 0..t {
-        arkInp[(nRoundsF/2)*t+j] = sigmaFOut[(nRoundsF/2-1)*t+j];
+        inp[j] = sigmaFOut[(nRoundsF/2-1)*t+j];
     }
-    arkOut[nRoundsF/2] = Ark(arkOut[nRoundsF/2], C, (nRoundsF/2)*t);
+    out = Ark(inp, C, (nRoundsF/2)*t);
+    for i in 0..t {
+        arkOut[(nRoundsF/2)*t+i] = out[i];
+    }
 
     for j in 0..t {
-        mixInp[(nRoundsF/2-1)*t+j] = arkOut[(nRoundsF/2)*t+j];
+        inp[j] = arkOut[(nRoundsF/2)*t+j];
     }
-    mixOut[nRoundsF/2-1] = Mix(mixInp[nRoundsF/2-1], P);
+    out = Mix(inp, P);
+    for i in 0..t {
+        mixOut[(nRoundsF/2-1)*t+i] = out[i];
+    }
 
     for r in 0..nRoundsP {
         if r==0 {
@@ -87,16 +100,19 @@ fn digest<N>(inputs : [Field; N]) -> Field {
 
         for j in 0..t {
             if j==0 {
-                mixSInp[r*t+j] = sigmaPOut[r] + C[(nRoundsF/2+1)*t + r];
+                inp[j] = sigmaPOut[r] + C[(nRoundsF/2+1)*t + r];
             } else {
                 if r==0 {
-                    mixSInp[r*t+j] = mixOut[(nRoundsF/2-1)*t+j];
+                    inp[j] = mixOut[(nRoundsF/2-1)*t+j];
                 } else {
-                    mixSInp[r*t+j] = mixSOut[(r-1)*t+j];
+                    inp[j] = mixSOut[(r-1)*t+j];
                 }
             }
         }
-        mixSOut[r] = MixS(mixSInp[r], S, r);
+        out = MixS(inp, S, r);
+        for j in 0..t {
+            mixSOut[r*t+j] = out[j];
+        }
     }
 
     for r in 0..nRoundsF/2-1 {
@@ -110,14 +126,20 @@ fn digest<N>(inputs : [Field; N]) -> Field {
         }
 
         for j in 0..t {
-            arkInp[(nRoundsF/2 + r + 1)*t+j] = sigmaFOut[(nRoundsF/2 + r)*t+j];
+            inp[j] = sigmaFOut[(nRoundsF/2 + r)*t+j];
         }
-        arkOut[nRoundsF/2 + r + 1] = Ark(arkInp[nRoundsF/2 + r + 1], C, (nRoundsF/2+1)*t + nRoundsP + r*t);
+        out = Ark(inp, C, (nRoundsF/2+1)*t + nRoundsP + r*t);
+        for j in 0..t {
+            arkOut[(nRoundsF/2 + r + 1)*j+t] = out[j];
+        }
 
         for j in 0..t {
-            mixInp[(nRoundsF/2 + r)*t+j] = arkOut[(nRoundsF/2 + r + 1)*t+j];
+            inp[j] = arkOut[(nRoundsF/2 + r + 1)*t+j];
         }
-        mixOut[nRoundsF/2 + r] = Mix(mixInp[nRoundsF/2 + r], M);
+        out = Mix(inp, M);
+        for j in 0..t {
+            mixOut[(nRoundsF/2 + r)*t+j] = out[j];
+        }
     }
 
     for j in 0..t {
@@ -125,18 +147,13 @@ fn digest<N>(inputs : [Field; N]) -> Field {
         sigmaFOut[(nRoundsF-1)*t+j] = Sigma(sigmaFInp[(nRoundsF-1)*t+j]);
     }
 
-    let mut out: [Field; nOuts] = [0; nOuts];
-    for i in 0..nOuts {
-        for j in 0..t {
-            mixLastInp[i][j] = sigmaFOut[nRoundsF-1][j];
-        }
-        mixLastOut[i] = MixLast(mixLastInp[i], M, i);
-        out[i] = mixLastOut[i];
+    let mut output: Field = 0;
+    for j in 0..t {
+        inp[j] = sigmaFOut[(nRoundsF-1)*t+j];
     }
-
-    // TODO: Change below code
-    let outp = 0;
-    outp
+    mixLastOut[0] = MixLast(inp, M, 0);
+    output = mixLastOut[0];
+    output
 }
 
 fn Ark(inp: [Field], C: [Field], r: comptime Field) -> [Field; t] {

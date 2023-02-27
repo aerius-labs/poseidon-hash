@@ -1,6 +1,12 @@
 mod poseidon;
 
-fn main(inputs : [Field; 10], out : Field) {
+fn main(inputs : [Field; 1]) -> pub Field {
     let hash = poseidon::digest(inputs);
-    constrain out == hash;
+    hash
+}
+
+#[test]
+fn test() {
+    let inp1: [Field; 1] = [1];
+    constrain main(inp1) == 0;
 }
