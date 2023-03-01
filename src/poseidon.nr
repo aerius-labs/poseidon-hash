@@ -10,7 +10,6 @@ global T: comptime Field = 2; // nInputs + 1
 global N_ROUNDS_F: Field = 8;
 global N_ROUNDS_P: Field = 56; // N_ROUNDS_P[t-2]
 
-
 fn digest<N>(inputs : [Field; N]) -> Field {
     let C = POSEIDON_C();
     let S = POSEIDON_S();
@@ -102,7 +101,18 @@ fn digest<N>(inputs : [Field; N]) -> Field {
                 }
             }
         }
-        out = MixS(inp, S, r);
+        // Implementing MixS here because to reduce time complexity
+        {
+            let mut lc: Field = 0;
+
+            for i in 0..T {
+                lc += S[((T*2)-1)*r+i]*inp[i];
+            }
+            out[0] = lc;
+            for i in 1..T {
+                out[i] = inp[i] + inp[0] * S[((T*2)-1)*r + T + i - 1];
+            }
+        }
         for j in 0..T {
             mix_s[r*T+j] = out[j];
         }
@@ -120,7 +130,12 @@ fn digest<N>(inputs : [Field; N]) -> Field {
         for j in 0..T {
             inp[j] = sigma_f[(N_ROUNDS_F/2 + r)*T+j];
         }
-        out = Ark(inp, C, (N_ROUNDS_F/2+1)*T + N_ROUNDS_P + r*T);
+        // Ark Implementation here to reduce time complexity
+        {
+            for i in 0..T {
+                out[i] = inp[i] + C[i + r];
+            }
+        }
         for j in 0..T {
             ark[(N_ROUNDS_F/2 + r + 1)*T+j] = out[j];
         }
@@ -142,7 +157,14 @@ fn digest<N>(inputs : [Field; N]) -> Field {
     for j in 0..T {
         inp[j] = sigma_f[(N_ROUNDS_F-1)*T+j];
     }
-    output = MixLast(inp, M, 0);
+    // Implementing MixLast here to reduce time Complexity
+    {
+        let mut lc: Field = 0;
+        for j in 0..T {
+            lc += M[j*T]*inp[j];
+        }
+        output = lc;
+    }
     output
 }
 
