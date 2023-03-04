@@ -10,7 +10,7 @@ global T: comptime Field = 2; // nInputs + 1
 global N_ROUNDS_F: Field = 8;
 global N_ROUNDS_P: Field = 56; // N_ROUNDS_P[t-2]
 
-fn digest<N>(inputs : [Field; N]) -> Field {
+fn digest<N>(input : Field) -> Field {
     let C = POSEIDON_C();
     let S = POSEIDON_S();
     let M = POSEIDON_M();
@@ -26,7 +26,7 @@ fn digest<N>(inputs : [Field; N]) -> Field {
 
     for j in 0..T {
         if j>0 {
-            inp[j] = inputs[j-1];
+            inp[j] = input;
         } else {
             inp[j] = 0;
         }
