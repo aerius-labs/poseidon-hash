@@ -15,7 +15,6 @@ fn digest<N>(inputs : [Field; N]) -> Field {
     let S = POSEIDON_S();
     let M = POSEIDON_M();
     let P = POSEIDON_P();
-    let initial_state = 0;
 
     let mut ark: [Field; T*N_ROUNDS_F] = [0; T*N_ROUNDS_F];
     let mut sigma_f: [Field; T*N_ROUNDS_F] = [0; T*N_ROUNDS_F];
@@ -29,7 +28,7 @@ fn digest<N>(inputs : [Field; N]) -> Field {
         if j>0 {
             inp[j] = inputs[j-1];
         } else {
-            inp[j] = initial_state;
+            inp[j] = 0;
         }
     }
     out = Ark(inp, C, 0);
