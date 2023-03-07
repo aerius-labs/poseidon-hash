@@ -1,5 +1,6 @@
 // Reference Implementation Link:-
 // https://github.com/iden3/circomlib/blob/master/circuits/poseidon.circom
+use dep::std;
 
 global N_INPUTS: Field = 1;
 // global N_ROUNDS_P: [Field; 16] = [56, 57, 56, 60, 60, 63, 64, 63, 60, 66, 60, 65, 70, 60, 64, 68];
@@ -132,7 +133,7 @@ fn digest<N>(input : Field) -> Field {
         // Ark Implementation here to reduce time complexity
         {
             for i in 0..T {
-                out[i] = inp[i] + C[i + r];
+                out[i] = inp[i] + C[i + (N_ROUNDS_F/2+1)*T + N_ROUNDS_P + r*T];
             }
         }
         for j in 0..T {
