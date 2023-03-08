@@ -132,7 +132,8 @@ contract TurboVerifier {
     function get_verification_key() internal pure returns (Types.VerificationKey memory) {
         Types.VerificationKey memory vk;
 
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             mstore(add(vk, 0x00), 8192) // vk.circuit_size
             mstore(add(vk, 0x20), 1) // vk.num_inputs
             mstore(add(vk, 0x40),0x006fab49b869ae62001deac878b2667bd31bf3e28e3a2d764aa49b8d9bbdd310) // vk.work_root
@@ -285,7 +286,8 @@ contract TurboVerifier {
         {
             uint256 zeta = challenges.zeta;
             uint256 pi_z_omega_scalar = vk.work_root;
-            assembly {
+            /// @solidity memory-safe-assembly
+assembly {
                 pi_z_omega_scalar := mulmod(pi_z_omega_scalar, zeta, p)
                 pi_z_omega_scalar := mulmod(pi_z_omega_scalar, u, p)
                 batch_evaluation_g1_scalar := sub(p, batch_evaluation_g1_scalar)
@@ -362,7 +364,8 @@ contract TurboVerifier {
         }
 
         Types.G1Point memory lhs;
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             // store accumulator point at mptr
             let mPtr := mload(0x40)
 
@@ -392,7 +395,8 @@ contract TurboVerifier {
 
         // negate lhs y-coordinate
         uint256 q = Bn254Crypto.p_mod;
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             mstore(add(lhs, 0x20), sub(q, mload(add(lhs, 0x20))))
         }
 
@@ -413,7 +417,8 @@ contract TurboVerifier {
             Types.G1Point memory recursive_P2 = decoded_proof.recursive_P2;
             recursive_P1.validateG1Point();
             recursive_P2.validateG1Point();
-            assembly {
+            /// @solidity memory-safe-assembly
+assembly {
                 let mPtr := mload(0x40)
 
                 // compute u.u.[recursive_P1]
@@ -470,7 +475,8 @@ contract TurboVerifier {
         uint256 data_ptr;
         uint256 proof_ptr;
         // first 32 bytes of bytes array contains length, skip it
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             data_ptr := add(calldataload(0x04), 0x24)
             proof_ptr := proof
         }
@@ -481,7 +487,8 @@ contract TurboVerifier {
             uint256 y0 = 0;
             uint256 x1 = 0;
             uint256 y1 = 0;
-            assembly {
+            /// @solidity memory-safe-assembly
+assembly {
                 index_counter := add(index_counter, data_ptr)
                 x0 := calldataload(index_counter)
                 x0 := add(x0, shl(68, calldataload(add(index_counter, 0x20))))
@@ -505,7 +512,8 @@ contract TurboVerifier {
             proof.recursive_P2 = Bn254Crypto.new_g1(x1, y1);
         }
 
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             let public_input_byte_length := mul(num_public_inputs, 0x20)
             data_ptr := add(data_ptr, public_input_byte_length)
 
@@ -850,7 +858,8 @@ library Bn254Crypto {
         uint256 input = base;
         uint256 count = 1;
 
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             let endpoint := add(exponent, 0x01)
             for {
 
@@ -871,7 +880,8 @@ library Bn254Crypto {
         uint256 output;
         bool success;
         uint256 p = r_mod;
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             let mPtr := mload(0x40)
             mstore(mPtr, 0x20)
             mstore(add(mPtr, 0x20), 0x20)
@@ -893,7 +903,8 @@ library Bn254Crypto {
     {
         uint256 xValue;
         uint256 yValue;
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             xValue := mod(x, r_mod)
             yValue := mod(y, r_mod)
         }
@@ -935,7 +946,8 @@ library Bn254Crypto {
         validateG1Point(b1);
         bool success;
         uint256 out;
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             let mPtr := mload(0x40)
             mstore(mPtr, mload(a1))
             mstore(add(mPtr, 0x20), mload(add(a1, 0x20)))
@@ -968,7 +980,8 @@ library Bn254Crypto {
     function validateG1Point(Types.G1Point memory point) internal pure {
         bool is_well_formed;
         uint256 p = p_mod;
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             let x := mload(point)
             let y := mload(add(point, 0x20))
 
@@ -1037,13 +1050,15 @@ library PolynomialEval {
         uint256 mPtr;
         uint256 p = Bn254Crypto.r_mod;
         uint256 accumulator = 1;
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             mPtr := mload(0x40)
             mstore(0x40, add(mPtr, 0x200))
         }
 
         // store denominators in mPtr -> mPtr + 0x80
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             mstore(mPtr, public_input_delta_denominator) // store denominator
             mstore(add(mPtr, 0x20), vanishing_denominator) // store denominator
             mstore(add(mPtr, 0x40), l_start_denominator) // store denominator
@@ -1061,7 +1076,8 @@ library PolynomialEval {
         }
 
         accumulator = Bn254Crypto.invert(accumulator);
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             let intermediate := mulmod(accumulator, mload(add(mPtr, 0xe0)), p)
             accumulator := mulmod(accumulator, mload(add(mPtr, 0x60)), p)
             mstore(add(mPtr, 0x60), intermediate)
@@ -1117,7 +1133,8 @@ library PolynomialEval {
         // it scales with the number of public inputs
         uint256 p = Bn254Crypto.r_mod;
         bool valid = true;
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             root_1 := mulmod(root_1, 0x05, p)
             root_2 := mulmod(root_2, 0x07, p)
             public_inputs := add(calldataload(0x04), 0x24)
@@ -1206,7 +1223,8 @@ library PolynomialEval {
             p
         );
         vk.zeta_pow_n = vanishing_numerator;
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             vanishing_numerator := addmod(vanishing_numerator, sub(p, 1), p)
         }
 
@@ -1217,7 +1235,8 @@ library PolynomialEval {
         uint256 l_start_denominator;
         uint256 l_end_denominator;
         uint256 z = zeta; // copy input var to prevent stack depth errors
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             // vanishing_denominator = (z - w^{n-1})(z - w^{n-2})(z - w^{n-3})(z - w^{n-4})
             // we need to cut 4 roots of unity out of the vanishing poly, the last 4 constraints are not satisfied due to randomness
             // added to ensure the proving system is zero-knowledge
@@ -1244,7 +1263,8 @@ library PolynomialEval {
 
         work_root = vk.work_root;
         uint256 lagrange_numerator;
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             lagrange_numerator := mulmod(vanishing_numerator, domain_inverse, p)
             // l_start_denominator = z - 1
             // l_end_denominator = z * \omega^5 - 1
@@ -1281,7 +1301,8 @@ library PolynomialEval {
         uint256 alpha = challenges.alpha;
         uint256 t1;
         uint256 p = Bn254Crypto.r_mod;
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             t1 := addmod(mulmod(q_arith, q_arith, p), sub(p, q_arith), p)
 
             let t2 := addmod(sub(p, mulmod(wire4, 0x04, p)), wire3, p)
@@ -1319,7 +1340,8 @@ library PolynomialEval {
             uint256 wire_t0 = proof.w4; // w4
             uint256 wire_t1 = proof.w4_omega; // w4_omega
             uint256 wire_t2 = proof.w3_omega; // w3_omega
-            assembly {
+            /// @solidity memory-safe-assembly
+assembly {
                 let wire4_neg := sub(p, wire_t0)
                 delta := addmod(wire_t1, mulmod(wire4_neg, 0x04, p), p)
 
@@ -1356,7 +1378,8 @@ library PolynomialEval {
             uint256 t0;
             uint256 t1;
             uint256 t2;
-            assembly {
+            /// @solidity memory-safe-assembly
+assembly {
                 t0 := addmod(wire_t1, addmod(wire_t0, wire_t3, p), p)
 
                 t1 := addmod(wire_t3, sub(p, wire_t0), p)
@@ -1384,7 +1407,8 @@ library PolynomialEval {
             wire_t2 = proof.w2; // w2
             wire_t3 = proof.w3_omega; // w3_omega
             uint256 wire_t4 = proof.w1_omega; // w1_omega
-            assembly {
+            /// @solidity memory-safe-assembly
+assembly {
                 t0 := mulmod(
                     addmod(wire_t1, wire_t2, p),
                     addmod(wire_t3, sub(p, wire_t0), p),
@@ -1412,7 +1436,8 @@ library PolynomialEval {
 
             wire_t1 = proof.w4; // w4
             wire_t2 = proof.w3; // w3
-            assembly {
+            /// @solidity memory-safe-assembly
+assembly {
                 let acc_init_id := addmod(wire_t1, sub(p, 0x01), p)
 
                 t1 := addmod(acc_init_id, sub(p, wire_t2), p)
@@ -1425,7 +1450,8 @@ library PolynomialEval {
                 alpha_base := mulmod(alpha_base, alpha, p)
             }
 
-            assembly {
+            /// @solidity memory-safe-assembly
+assembly {
                 let x_init_id := sub(
                     p,
                     mulmod(
@@ -1443,7 +1469,8 @@ library PolynomialEval {
             wire_t0 = proof.w2; // w2
             wire_t1 = proof.w3; // w3
             wire_t2 = proof.w4; // w4
-            assembly {
+            /// @solidity memory-safe-assembly
+assembly {
                 let y_init_id := mulmod(
                     add(0x01, sub(p, wire_t2)),
                     selector_value,
@@ -1463,7 +1490,8 @@ library PolynomialEval {
                 alpha_base := mulmod(alpha_base, alpha, p)
             }
             selector_value = proof.q_ecc;
-            assembly {
+            /// @solidity memory-safe-assembly
+assembly {
                 gate_id := mulmod(gate_id, selector_value, p)
             }
         }
@@ -1492,7 +1520,8 @@ library PolynomialEval {
             uint256 sigma1 = proof.sigma1;
             uint256 sigma2 = proof.sigma2;
             uint256 sigma3 = proof.sigma3;
-            assembly {
+            /// @solidity memory-safe-assembly
+assembly {
                 let t0 := add(add(wire1, gamma), mulmod(beta, sigma1, p))
 
                 let t1 := add(add(wire2, gamma), mulmod(beta, sigma2, p))
@@ -1516,7 +1545,8 @@ library PolynomialEval {
             uint256 lstart = lagrange_start;
             uint256 lend = lagrange_end;
             uint256 public_delta = public_input_delta;
-            assembly {
+            /// @solidity memory-safe-assembly
+assembly {
                 let alpha_squared := mulmod(alpha, alpha, p)
                 let alpha_cubed := mulmod(alpha, alpha_squared, p)
 
@@ -1569,7 +1599,8 @@ library PolynomialEval {
 
         uint256 r_0;
         uint256 p = Bn254Crypto.r_mod;
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             r_0 := addmod(t0, addmod(t1, t2, p), p)
             // r_0 := mulmod(r_0, zero_poly_inverse, p) // not necessary for the simplified Plonk
         }
@@ -1611,7 +1642,8 @@ library PolynomialEval {
 
         // compute range_multiplier.[QRANGE] + logic_multiplier.[QLOGIC] + [accumulator] + [grand_product_term]
         bool success;
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             let mPtr := mload(0x40)
 
             // range_multiplier.[QRANGE]
@@ -1678,7 +1710,8 @@ library PolynomialEval {
         // Reserve 0xa0 bytes of memory to perform group operations
         uint256 accumulator_ptr;
         uint256 p = Bn254Crypto.r_mod;
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             accumulator_ptr := mload(0x40)
             mstore(0x40, add(accumulator_ptr, 0xa0))
         }
@@ -1689,7 +1722,8 @@ library PolynomialEval {
         // first term
         Types.G1Point memory work_point = proof.T1;
         work_point.validateG1Point();
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             mstore(accumulator_ptr, mload(work_point))
             mstore(add(accumulator_ptr, 0x20), mload(add(work_point, 0x20)))
             mstore(add(accumulator_ptr, 0x40), zero_poly_eval_neg)
@@ -1709,7 +1743,8 @@ library PolynomialEval {
         uint256 zeta_n = scalar_multiplier;
         work_point = proof.T2;
         work_point.validateG1Point();
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             mstore(add(accumulator_ptr, 0x40), mload(work_point))
             mstore(add(accumulator_ptr, 0x60), mload(add(work_point, 0x20)))
             mstore(
@@ -1744,7 +1779,8 @@ library PolynomialEval {
         // third term
         work_point = proof.T3;
         work_point.validateG1Point();
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             scalar_multiplier := mulmod(scalar_multiplier, scalar_multiplier, p)
 
             mstore(add(accumulator_ptr, 0x40), mload(work_point))
@@ -1784,7 +1820,8 @@ library PolynomialEval {
         // fourth term
         work_point = proof.T4;
         work_point.validateG1Point();
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             scalar_multiplier := mulmod(scalar_multiplier, zeta_n, p)
 
             mstore(add(accumulator_ptr, 0x40), mload(work_point))
@@ -1824,7 +1861,8 @@ library PolynomialEval {
         // fifth term
         work_point = partial_opening_commitment;
         work_point.validateG1Point();
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             // add partial opening commitment into accumulator
             mstore(
                 add(accumulator_ptr, 0x40),
@@ -1853,7 +1891,8 @@ library PolynomialEval {
         // W1
         work_point = proof.W1;
         work_point.validateG1Point();
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             u_plus_one := addmod(u_plus_one, 0x01, p)
 
             scalar_multiplier := mulmod(v_challenge, u_plus_one, p)
@@ -1893,7 +1932,8 @@ library PolynomialEval {
         v_challenge = challenges.v1;
         work_point = proof.W2;
         work_point.validateG1Point();
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             scalar_multiplier := mulmod(v_challenge, u_plus_one, p)
 
             mstore(add(accumulator_ptr, 0x40), mload(work_point))
@@ -1931,7 +1971,8 @@ library PolynomialEval {
         v_challenge = challenges.v2;
         work_point = proof.W3;
         work_point.validateG1Point();
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             scalar_multiplier := mulmod(v_challenge, u_plus_one, p)
 
             mstore(add(accumulator_ptr, 0x40), mload(work_point))
@@ -1969,7 +2010,8 @@ library PolynomialEval {
         v_challenge = challenges.v3;
         work_point = proof.W4;
         work_point.validateG1Point();
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             scalar_multiplier := mulmod(v_challenge, u_plus_one, p)
 
             mstore(add(accumulator_ptr, 0x40), mload(work_point))
@@ -2007,7 +2049,8 @@ library PolynomialEval {
         scalar_multiplier = challenges.v4;
         work_point = vk.SIGMA1;
         work_point.validateG1Point();
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             mstore(add(accumulator_ptr, 0x40), mload(work_point))
             mstore(add(accumulator_ptr, 0x60), mload(add(work_point, 0x20)))
             mstore(add(accumulator_ptr, 0x80), scalar_multiplier)
@@ -2043,7 +2086,8 @@ library PolynomialEval {
         scalar_multiplier = challenges.v5;
         work_point = vk.SIGMA2;
         work_point.validateG1Point();
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             mstore(add(accumulator_ptr, 0x40), mload(work_point))
             mstore(add(accumulator_ptr, 0x60), mload(add(work_point, 0x20)))
             mstore(add(accumulator_ptr, 0x80), scalar_multiplier)
@@ -2079,7 +2123,8 @@ library PolynomialEval {
         scalar_multiplier = challenges.v6;
         work_point = vk.SIGMA3;
         work_point.validateG1Point();
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             mstore(add(accumulator_ptr, 0x40), mload(work_point))
             mstore(add(accumulator_ptr, 0x60), mload(add(work_point, 0x20)))
             mstore(add(accumulator_ptr, 0x80), scalar_multiplier)
@@ -2115,7 +2160,8 @@ library PolynomialEval {
         scalar_multiplier = challenges.v7;
         work_point = vk.QARITH;
         work_point.validateG1Point();
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             mstore(add(accumulator_ptr, 0x40), mload(work_point))
             mstore(add(accumulator_ptr, 0x60), mload(add(work_point, 0x20)))
             mstore(add(accumulator_ptr, 0x80), scalar_multiplier)
@@ -2152,7 +2198,8 @@ library PolynomialEval {
         scalar_multiplier = challenges.v8;
         work_point = vk.QECC;
         work_point.validateG1Point();
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             mstore(add(accumulator_ptr, 0x40), mload(work_point))
             mstore(add(accumulator_ptr, 0x60), mload(add(work_point, 0x20)))
             mstore(add(accumulator_ptr, 0x80), scalar_multiplier)
@@ -2196,67 +2243,78 @@ library PolynomialEval {
 
         lhs = challenges.v0;
         rhs = proof.w1;
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             opening_scalar := addmod(opening_scalar, mulmod(lhs, rhs, p), p)
         }
 
         lhs = challenges.v1;
         rhs = proof.w2;
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             opening_scalar := addmod(opening_scalar, mulmod(lhs, rhs, p), p)
         }
 
         lhs = challenges.v2;
         rhs = proof.w3;
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             opening_scalar := addmod(opening_scalar, mulmod(lhs, rhs, p), p)
         }
 
         lhs = challenges.v3;
         rhs = proof.w4;
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             opening_scalar := addmod(opening_scalar, mulmod(lhs, rhs, p), p)
         }
 
         lhs = challenges.v4;
         rhs = proof.sigma1;
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             opening_scalar := addmod(opening_scalar, mulmod(lhs, rhs, p), p)
         }
 
         lhs = challenges.v5;
         rhs = proof.sigma2;
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             opening_scalar := addmod(opening_scalar, mulmod(lhs, rhs, p), p)
         }
 
         lhs = challenges.v6;
         rhs = proof.sigma3;
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             opening_scalar := addmod(opening_scalar, mulmod(lhs, rhs, p), p)
         }
 
         lhs = challenges.v7;
         rhs = proof.q_arith;
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             opening_scalar := addmod(opening_scalar, mulmod(lhs, rhs, p), p)
         }
 
         lhs = challenges.v8;
         rhs = proof.q_ecc;
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             opening_scalar := addmod(opening_scalar, mulmod(lhs, rhs, p), p)
         }
 
         lhs = challenges.v9;
         rhs = proof.q_c;
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             opening_scalar := addmod(opening_scalar, mulmod(lhs, rhs, p), p)
         }
 
         // lhs = 1;    //challenges.v10; (should be -1 for simplified Plonk)
         rhs = proof.r_0; // linearization_polynomial should be r_0 for simplified Plonk
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             opening_scalar := addmod(opening_scalar, sub(p, rhs), p)
         }
         // should be removed for simplified Plonk
@@ -2268,13 +2326,15 @@ library PolynomialEval {
         lhs = challenges.v0;
         rhs = proof.w1_omega;
         uint256 shifted_opening_scalar;
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             shifted_opening_scalar := mulmod(lhs, rhs, p)
         }
 
         lhs = challenges.v1;
         rhs = proof.w2_omega;
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             shifted_opening_scalar := addmod(
                 shifted_opening_scalar,
                 mulmod(lhs, rhs, p),
@@ -2284,7 +2344,8 @@ library PolynomialEval {
 
         lhs = challenges.v2;
         rhs = proof.w3_omega;
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             shifted_opening_scalar := addmod(
                 shifted_opening_scalar,
                 mulmod(lhs, rhs, p),
@@ -2294,7 +2355,8 @@ library PolynomialEval {
 
         lhs = challenges.v3;
         rhs = proof.w4_omega;
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             shifted_opening_scalar := addmod(
                 shifted_opening_scalar,
                 mulmod(lhs, rhs, p),
@@ -2303,12 +2365,14 @@ library PolynomialEval {
         }
 
         lhs = proof.grand_product_at_z_omega;
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             shifted_opening_scalar := addmod(shifted_opening_scalar, lhs, p)
         }
 
         lhs = challenges.u;
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             shifted_opening_scalar := mulmod(shifted_opening_scalar, lhs, p)
 
             opening_scalar := addmod(opening_scalar, shifted_opening_scalar, p)
@@ -2332,7 +2396,8 @@ library PolynomialEval {
         uint256 p = Bn254Crypto.r_mod;
         uint256 scalar_multiplier;
         uint256 accumulator_ptr; // reserve 0xa0 bytes of memory to multiply and add points
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             accumulator_ptr := mload(0x40)
             mstore(0x40, add(accumulator_ptr, 0xa0))
         }
@@ -2343,7 +2408,8 @@ library PolynomialEval {
                 {
                     uint256 w4 = proof.w4;
                     uint256 w4_omega = proof.w4_omega;
-                    assembly {
+                    /// @solidity memory-safe-assembly
+assembly {
                         delta := addmod(
                             w4_omega,
                             sub(p, mulmod(w4, 0x04, p)),
@@ -2353,7 +2419,8 @@ library PolynomialEval {
                 }
                 uint256 w1 = proof.w1;
 
-                assembly {
+                /// @solidity memory-safe-assembly
+assembly {
                     scalar_multiplier := w1
                     scalar_multiplier := mulmod(
                         scalar_multiplier,
@@ -2374,7 +2441,8 @@ library PolynomialEval {
                 Types.G1Point memory Q1 = vk.Q1;
                 Q1.validateG1Point();
                 bool success;
-                assembly {
+                /// @solidity memory-safe-assembly
+assembly {
                     let mPtr := mload(0x40)
                     mstore(mPtr, mload(Q1))
                     mstore(add(mPtr, 0x20), mload(add(Q1, 0x20)))
@@ -2394,7 +2462,8 @@ library PolynomialEval {
             // Q2 Selector
             {
                 uint256 w2 = proof.w2;
-                assembly {
+                /// @solidity memory-safe-assembly
+assembly {
                     scalar_multiplier := w2
                     scalar_multiplier := mulmod(
                         scalar_multiplier,
@@ -2410,7 +2479,8 @@ library PolynomialEval {
                 Types.G1Point memory Q2 = vk.Q2;
                 Q2.validateG1Point();
                 bool success;
-                assembly {
+                /// @solidity memory-safe-assembly
+assembly {
                     let mPtr := mload(0x40)
                     mstore(mPtr, mload(Q2))
                     mstore(add(mPtr, 0x20), mload(add(Q2, 0x20)))
@@ -2446,7 +2516,8 @@ library PolynomialEval {
             {
                 {
                     uint256 w3 = proof.w3;
-                    assembly {
+                    /// @solidity memory-safe-assembly
+assembly {
                         scalar_multiplier := w3
                         scalar_multiplier := mulmod(
                             scalar_multiplier,
@@ -2464,13 +2535,15 @@ library PolynomialEval {
                     uint256 t1;
                     {
                         uint256 w3_omega = proof.w3_omega;
-                        assembly {
+                        /// @solidity memory-safe-assembly
+assembly {
                             t1 := mulmod(delta, w3_omega, p)
                         }
                     }
                     {
                         uint256 w2 = proof.w2;
-                        assembly {
+                        /// @solidity memory-safe-assembly
+assembly {
                             scaling_alpha := mulmod(scaling_alpha, alpha, p)
 
                             t1 := mulmod(t1, w2, p)
@@ -2489,14 +2562,16 @@ library PolynomialEval {
                 uint256 t0 = proof.w1_omega;
                 {
                     uint256 w1 = proof.w1;
-                    assembly {
+                    /// @solidity memory-safe-assembly
+assembly {
                         scaling_alpha := mulmod(scaling_alpha, alpha, p)
                         t0 := addmod(t0, sub(p, w1), p)
                         t0 := mulmod(t0, delta, p)
                     }
                 }
                 uint256 w3_omega = proof.w3_omega;
-                assembly {
+                /// @solidity memory-safe-assembly
+assembly {
                     t0 := mulmod(t0, w3_omega, p)
                     t0 := mulmod(t0, scaling_alpha, p)
 
@@ -2509,7 +2584,8 @@ library PolynomialEval {
             Types.G1Point memory Q3 = vk.Q3;
             Q3.validateG1Point();
             bool success;
-            assembly {
+            /// @solidity memory-safe-assembly
+assembly {
                 let mPtr := mload(0x40)
                 mstore(mPtr, mload(Q3))
                 mstore(add(mPtr, 0x20), mload(add(Q3, 0x20)))
@@ -2546,7 +2622,8 @@ library PolynomialEval {
             uint256 w3 = proof.w3;
             uint256 w4 = proof.w4;
             uint256 q_c = proof.q_c;
-            assembly {
+            /// @solidity memory-safe-assembly
+assembly {
                 scalar_multiplier := w4
                 scalar_multiplier := mulmod(scalar_multiplier, alpha_base, p)
                 scalar_multiplier := mulmod(scalar_multiplier, q_arith, p)
@@ -2566,7 +2643,8 @@ library PolynomialEval {
             Types.G1Point memory Q4 = vk.Q4;
             Q4.validateG1Point();
             bool success;
-            assembly {
+            /// @solidity memory-safe-assembly
+assembly {
                 let mPtr := mload(0x40)
                 mstore(mPtr, mload(Q4))
                 mstore(add(mPtr, 0x20), mload(add(Q4, 0x20)))
@@ -2602,7 +2680,8 @@ library PolynomialEval {
         {
             uint256 w4 = proof.w4;
             uint256 q_c = proof.q_c;
-            assembly {
+            /// @solidity memory-safe-assembly
+assembly {
                 let neg_w4 := sub(p, w4)
                 scalar_multiplier := mulmod(w4, w4, p)
                 scalar_multiplier := addmod(scalar_multiplier, neg_w4, p)
@@ -2626,7 +2705,8 @@ library PolynomialEval {
             Types.G1Point memory Q5 = vk.Q5;
             Q5.validateG1Point();
             bool success;
-            assembly {
+            /// @solidity memory-safe-assembly
+assembly {
                 let mPtr := mload(0x40)
                 mstore(mPtr, mload(Q5))
                 mstore(add(mPtr, 0x20), mload(add(Q5, 0x20)))
@@ -2664,7 +2744,8 @@ library PolynomialEval {
                 uint256 w1 = proof.w1;
                 uint256 w2 = proof.w2;
 
-                assembly {
+                /// @solidity memory-safe-assembly
+assembly {
                     scalar_multiplier := mulmod(w1, w2, p)
                     scalar_multiplier := mulmod(
                         scalar_multiplier,
@@ -2676,7 +2757,8 @@ library PolynomialEval {
             }
             uint256 w3 = proof.w3;
             uint256 q_c = proof.q_c;
-            assembly {
+            /// @solidity memory-safe-assembly
+assembly {
                 scaling_alpha := mulmod(scaling_alpha, alpha, p)
                 let t0 := mulmod(w3, q_ecc, p)
                 t0 := mulmod(t0, q_c, p)
@@ -2688,7 +2770,8 @@ library PolynomialEval {
             Types.G1Point memory QM = vk.QM;
             QM.validateG1Point();
             bool success;
-            assembly {
+            /// @solidity memory-safe-assembly
+assembly {
                 let mPtr := mload(0x40)
                 mstore(mPtr, mload(QM))
                 mstore(add(mPtr, 0x20), mload(add(QM, 0x20)))
@@ -2724,7 +2807,8 @@ library PolynomialEval {
         // QC Selector
         {
             uint256 q_c_challenge = challenges.v9;
-            assembly {
+            /// @solidity memory-safe-assembly
+assembly {
                 scalar_multiplier := alpha_base
                 scalar_multiplier := mulmod(scalar_multiplier, q_arith, p)
 
@@ -2737,7 +2821,8 @@ library PolynomialEval {
             Types.G1Point memory QC = vk.QC;
             QC.validateG1Point();
             bool success;
-            assembly {
+            /// @solidity memory-safe-assembly
+assembly {
                 let mPtr := mload(0x40)
                 mstore(mPtr, mload(QC))
                 mstore(add(mPtr, 0x20), mload(add(QC, 0x20)))
@@ -2785,7 +2870,8 @@ library PolynomialEval {
             {
                 uint256 wire1_omega = proof.w1_omega;
                 uint256 wire1 = proof.w1;
-                assembly {
+                /// @solidity memory-safe-assembly
+assembly {
                     t0 := addmod(wire1_omega, sub(p, mulmod(wire1, 0x04, p)), p)
                 }
             }
@@ -2793,7 +2879,8 @@ library PolynomialEval {
             {
                 uint256 wire2_omega = proof.w2_omega;
                 uint256 wire2 = proof.w2;
-                assembly {
+                /// @solidity memory-safe-assembly
+assembly {
                     t1 := addmod(wire2_omega, sub(p, mulmod(wire2, 0x04, p)), p)
 
                     delta_sum := addmod(t0, t1, p)
@@ -2810,14 +2897,16 @@ library PolynomialEval {
 
             {
                 uint256 wire3 = proof.w3;
-                assembly {
+                /// @solidity memory-safe-assembly
+assembly {
                     t4 := mulmod(wire3, 0x02, p)
                     identity := addmod(identity, sub(p, t4), p)
                     identity := mulmod(identity, alpha, p)
                 }
             }
 
-            assembly {
+            /// @solidity memory-safe-assembly
+assembly {
                 t4 := addmod(t4, t4, p)
                 t2 := addmod(t2, sub(p, t0), p)
                 t0 := mulmod(t0, 0x04, p)
@@ -2859,7 +2948,8 @@ library PolynomialEval {
 
             {
                 uint256 wire3 = proof.w3;
-                assembly {
+                /// @solidity memory-safe-assembly
+assembly {
                     delta_sum := mulmod(delta_sum, wire3, p)
 
                     delta_sum := addmod(delta_sum, t1, p)
@@ -2868,19 +2958,22 @@ library PolynomialEval {
             }
             {
                 uint256 wire4 = proof.w4;
-                assembly {
+                /// @solidity memory-safe-assembly
+assembly {
                     t2 := mulmod(wire4, 0x04, p)
                 }
             }
             {
                 uint256 wire4_omega = proof.w4_omega;
-                assembly {
+                /// @solidity memory-safe-assembly
+assembly {
                     t2 := addmod(wire4_omega, sub(p, t2), p)
                 }
             }
             {
                 uint256 q_c = proof.q_c;
-                assembly {
+                /// @solidity memory-safe-assembly
+assembly {
                     t3 := addmod(t2, t2, p)
                     t2 := addmod(t2, t3, p)
 
@@ -2901,14 +2994,16 @@ library PolynomialEval {
             }
             uint256 alpha_base = challenges.alpha_base;
 
-            assembly {
+            /// @solidity memory-safe-assembly
+assembly {
                 identity := mulmod(identity, alpha_base, p)
             }
         }
         // update alpha
         uint256 alpha_base = challenges.alpha_base;
         uint256 alpha = challenges.alpha;
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             alpha := mulmod(alpha, alpha, p)
             alpha := mulmod(alpha, alpha, p)
             alpha_base := mulmod(alpha_base, alpha, p)
@@ -2932,7 +3027,8 @@ library PolynomialEval {
         uint256 alpha_base = challenges.alpha_base;
         uint256 range_acc;
         uint256 p = Bn254Crypto.r_mod;
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             let delta_1 := addmod(wire3, sub(p, mulmod(wire4, 0x04, p)), p)
             let delta_2 := addmod(wire2, sub(p, mulmod(wire3, 0x04, p)), p)
             let delta_3 := addmod(wire1, sub(p, mulmod(wire2, 0x04, p)), p)
@@ -3006,7 +3102,8 @@ library PolynomialEval {
         {
             uint256 w1 = proof.w1;
             uint256 sigma1 = proof.sigma1;
-            assembly {
+            /// @solidity memory-safe-assembly
+assembly {
                 let witness_term := addmod(w1, gamma, p)
                 partial_grand_product := addmod(
                     mulmod(beta, zeta, p),
@@ -3023,7 +3120,8 @@ library PolynomialEval {
         {
             uint256 w2 = proof.w2;
             uint256 sigma2 = proof.sigma2;
-            assembly {
+            /// @solidity memory-safe-assembly
+assembly {
                 let witness_term := addmod(w2, gamma, p)
                 partial_grand_product := mulmod(
                     partial_grand_product,
@@ -3044,7 +3142,8 @@ library PolynomialEval {
         {
             uint256 w3 = proof.w3;
             uint256 sigma3 = proof.sigma3;
-            assembly {
+            /// @solidity memory-safe-assembly
+assembly {
                 let witness_term := addmod(w3, gamma, p)
                 partial_grand_product := mulmod(
                     partial_grand_product,
@@ -3065,7 +3164,8 @@ library PolynomialEval {
         }
         {
             uint256 w4 = proof.w4;
-            assembly {
+            /// @solidity memory-safe-assembly
+assembly {
                 partial_grand_product := mulmod(
                     partial_grand_product,
                     addmod(
@@ -3087,7 +3187,8 @@ library PolynomialEval {
             uint256 separator_challenge = challenges.u;
             uint256 grand_product_at_z_omega = proof.grand_product_at_z_omega;
             uint256 l_start = L1_fr;
-            assembly {
+            /// @solidity memory-safe-assembly
+assembly {
                 partial_grand_product := mulmod(
                     partial_grand_product,
                     alpha_base,
@@ -3134,7 +3235,8 @@ library PolynomialEval {
         Z.validateG1Point();
         SIGMA4.validateG1Point();
         bool success;
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             let mPtr := mload(0x40)
             mstore(mPtr, mload(Z))
             mstore(add(mPtr, 0x20), mload(add(Z, 0x20)))
@@ -3195,7 +3297,8 @@ library Transcript {
         uint256 num_public_inputs
     ) internal pure {
         bytes32 challenge;
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             let mPtr := mload(0x40)
             mstore8(add(mPtr, 0x20), shr(24, circuit_size))
             mstore8(add(mPtr, 0x21), shr(16, circuit_size))
@@ -3224,7 +3327,8 @@ library Transcript {
         bytes32 old_challenge = self.current_challenge;
         uint256 p = Bn254Crypto.r_mod;
         uint256 reduced_challenge;
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             let m_ptr := mload(0x40)
             // N.B. If the calldata ABI changes this code will need to change!
             // We can copy all of the public inputs, followed by the wire commitments, into memory
@@ -3245,7 +3349,8 @@ library Transcript {
         challenges.beta = reduced_challenge;
 
         // get gamma challenge by appending 1 to the beta challenge and hash
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             mstore(0x00, challenge)
             mstore8(0x20, 0x01)
             challenge := keccak256(0, 0x21)
@@ -3264,7 +3369,8 @@ library Transcript {
         bytes32 old_challenge = self.current_challenge;
         uint256 p = Bn254Crypto.r_mod;
         uint256 reduced_challenge;
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             let m_ptr := mload(0x40)
             mstore(m_ptr, old_challenge)
             mstore(add(m_ptr, 0x20), mload(add(Z, 0x20)))
@@ -3289,7 +3395,8 @@ library Transcript {
         bytes32 old_challenge = self.current_challenge;
         uint256 p = Bn254Crypto.r_mod;
         uint256 reduced_challenge;
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             let m_ptr := mload(0x40)
             mstore(m_ptr, old_challenge)
             mstore(add(m_ptr, 0x20), mload(add(T1, 0x20)))
@@ -3329,7 +3436,8 @@ library Transcript {
 
         // We want to copy SIXTEEN field elements from calldata into memory to hash
         // But we start by adding the quotient poly evaluation to the hash transcript
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             // get a calldata pointer that points to the start of the data we want to copy
             let calldata_ptr := add(calldataload(0x04), 0x24)
             // skip over the public inputs
@@ -3350,48 +3458,57 @@ library Transcript {
 
         // for subsequent challenges we iterate 10 times.
         // At each iteration i \in [1, 10] we compute challenges.vi = keccak256(base_v_challenge, byte(i))
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             mstore(0x00, base_v_challenge)
             mstore8(0x20, 0x01)
             updated_v := mod(keccak256(0x00, 0x21), p)
         }
         challenges.v1 = updated_v;
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             mstore8(0x20, 0x02)
             updated_v := mod(keccak256(0x00, 0x21), p)
         }
         challenges.v2 = updated_v;
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             mstore8(0x20, 0x03)
             updated_v := mod(keccak256(0x00, 0x21), p)
         }
         challenges.v3 = updated_v;
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             mstore8(0x20, 0x04)
             updated_v := mod(keccak256(0x00, 0x21), p)
         }
         challenges.v4 = updated_v;
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             mstore8(0x20, 0x05)
             updated_v := mod(keccak256(0x00, 0x21), p)
         }
         challenges.v5 = updated_v;
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             mstore8(0x20, 0x06)
             updated_v := mod(keccak256(0x00, 0x21), p)
         }
         challenges.v6 = updated_v;
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             mstore8(0x20, 0x07)
             updated_v := mod(keccak256(0x00, 0x21), p)
         }
         challenges.v7 = updated_v;
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             mstore8(0x20, 0x08)
             updated_v := mod(keccak256(0x00, 0x21), p)
         }
         challenges.v8 = updated_v;
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             mstore8(0x20, 0x09)
             updated_v := mod(keccak256(0x00, 0x21), p)
         }
@@ -3399,7 +3516,8 @@ library Transcript {
 
         // update the current challenge when computing the final nu challenge
         bytes32 challenge;
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             mstore8(0x20, 0x0a)
             challenge := keccak256(0x00, 0x21)
             updated_v := mod(challenge, p)
@@ -3419,7 +3537,8 @@ library Transcript {
         bytes32 old_challenge = self.current_challenge;
         uint256 p = Bn254Crypto.r_mod;
         uint256 reduced_challenge;
-        assembly {
+        /// @solidity memory-safe-assembly
+assembly {
             let m_ptr := mload(0x40)
             mstore(m_ptr, old_challenge)
             mstore(add(m_ptr, 0x20), mload(add(PI_Z, 0x20)))
