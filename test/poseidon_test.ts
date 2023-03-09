@@ -7,6 +7,87 @@ import { expect } from 'chai';
 import { ethers } from "hardhat";
 import { Contract, ContractFactory, utils } from 'ethers';
 
+describe("Poseidon Hash", function() {
+
+    it("Should verify proof using abi and acir from typescript", async function() {        
+        // Compile noir program
+        const compiled_program = compile(path.resolve(__dirname, '../circuits/src/main.nr')); 
+        let acir = compiled_program.circuit;
+        const abi = compiled_program.abi;
+        
+        // Specify abi
+        abi.input = 1;
+        abi.return = 18586133768512220936620570745912940619677854269274689475585506675881198879027;
+
+        let [prover, verifier] = await setup_generic_prover_and_verifier(acir);
+ 
+        const proof = await create_proof(prover, acir, abi);
+
+        const verified = await verify_proof(verifier, proof);
+      
+        console.log(verified);
+
+        expect(verified).eq(true)
+    });
+
+    it("Should verify proof using acir from file and abi for typescript", async function() {
+        let acirByteArray = path_to_uint8array(path.resolve(__dirname, '../circuits/build/p.acir'));
+        let acir = acir_from_bytes(acirByteArray);
+
+        // The abi can also be specified using hex strings, just make sure there is an even number of bytes
+        let abi = {
+            input: 1,
+            return: "0x29176100eaa962bdc1fe6c654d6a3c130e96a4d1168b33848b897dc502820133",
+        }
+
+        let [prover, verifier] = await setup_generic_prover_and_verifier(acir);
+ 
+        const proof = await create_proof(prover, acir, abi);
+
+        const verified = await verify_proof(verifier, proof);
+      
+        console.log(verified);
+
+        expect(verified).eq(true)
+    });
+
+    it("Should verify proof using witness arr", async function() {
+        let acirByteArray = path_to_uint8array(path.resolve(__dirname, '../circuits/build/p.acir'));
+        let acir = acir_from_bytes(acirByteArray);
+
+        let witnessByteArray = path_to_uint8array(path.resolve(__dirname, '../circuits/build/p.tr'));
+        const barretenberg_witness_arr = await packed_witness_to_witness(acir, witnessByteArray);
+
+        let [prover, verifier] = await setup_generic_prover_and_verifier(acir);
+    
+        const proof = await create_proof_with_witness(prover, barretenberg_witness_arr);
+    
+        const verified = await verify_proof(verifier, proof);
+
+        expect(verified).eq(true)
+    });
+
+    it("Should verify proof using compute witness", async function() {
+        let acirByteArray = path_to_uint8array(path.resolve(__dirname, '../circuits/build/p.acir'));
+        let acir = acir_from_bytes(acirByteArray);
+
+        let [prover, verifier] = await setup_generic_prover_and_verifier(acir);
+ 
+        let initial_js_witness = ["0x01", "0x29176100eaa962bdc1fe6c654d6a3c130e96a4d1168b33848b897dc502820133"];
+        // NOTE: breaks without even number of bytes specified, the line below does not work
+        // let initial_js_witness = ["0x3", "0x4", "0x5100"];
+
+        let barretenberg_witness_arr = compute_witnesses(acir, initial_js_witness);
+
+        const proof = await create_proof_with_witness(prover, barretenberg_witness_arr);
+    
+        const verified = await verify_proof(verifier, proof);
+
+        expect(verified).eq(true)
+    });
+
+});
+
 describe('Poseidon test using solidity verifier', function() {
     let Verifier: ContractFactory;
     let verifierContract: Contract;
@@ -21,9 +102,8 @@ describe('Poseidon test using solidity verifier', function() {
         let acir = compiled_program.circuit;
 
         let abi = {
-            inputs: [1],
-            output: 0,
-            return: 1,
+            input: 1,
+            return: "0x29176100eaa962bdc1fe6c654d6a3c130e96a4d1168b33848b897dc502820133",
         }
 
         let [prover, verifier] = await setup_generic_prover_and_verifier(acir);
