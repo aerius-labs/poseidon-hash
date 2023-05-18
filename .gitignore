@@ -4,9 +4,9 @@ coverage
 coverage.json
 typechain
 typechain-types
-circuits/target
-circuits/build
-circuits/proof
+*/target
+*/build
+*/proofs
 
 # Hardhat files
 cache
