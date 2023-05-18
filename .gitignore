@@ -6,6 +6,7 @@ typechain
 typechain-types
 circuits/target
 circuits/build
+circuits/proof
 
 # Hardhat files
 cache
