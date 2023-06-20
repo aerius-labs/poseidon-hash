@@ -1,7 +1,7 @@
 mod poseidon;
 
-fn main(inputs : Field) -> pub Field {
-    let hash = poseidon::digest(inputs);
+fn main(input : Field) -> pub Field {
+    let hash = poseidon::digest(input);
     hash
 }
 
